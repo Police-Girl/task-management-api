@@ -160,7 +160,7 @@ task-management-api/
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/your-username/task-management-api.git
+git clone https://github.com/Police-Girl/task-management-api.git
 cd task-management-api
 ```
 
