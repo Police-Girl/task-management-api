@@ -13,7 +13,7 @@ from datetime import timedelta
 import dj_database_url
 from decouple import config
 
-# Base directory of the project (where manage.py lives)
+# Base directory of the project 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECRET_KEY: Used by Django to sign cookies, sessions, etc.
@@ -80,13 +80,20 @@ WSGI_APPLICATION = 'task_api.wsgi.application'
 
 
 # ─── DATABASE ──────────────────────────────────────────────────────────────────
-# Uses SQLite locally. Set DATABASE_URL in .env for PostgreSQL in production.
-DATABASES = {
-    'default': dj_database_url.config(
-        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
-        conn_max_age=600
-    )
-}
+# Uses SQLite locall.
+DATABASE_URL = config('DATABASE_URL', default='')
+
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # ─── PASSWORD VALIDATION ───────────────────────────────────────────────────────
