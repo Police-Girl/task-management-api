@@ -1,13 +1,3 @@
-"""
-serializers.py — Data Serialization
-
-Serializers do two things:
-  1. Convert Python objects → JSON (for API responses)
-  2. Convert JSON → validated Python data → save to DB
-
-They also handle all input VALIDATION.
-"""
-
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.utils import timezone
@@ -15,15 +5,13 @@ from rest_framework import serializers
 from .models import Task, Priority, Status
 
 
-# ─── USER SERIALIZERS ─────────────────────────────────────────────────────────
-
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    """Used for creating a new user account (POST /api/users/)."""
-
+    # write_only means this field is accepted on input but never returned in responses
     password = serializers.CharField(
-        write_only=True,            # Never returned in responses
+        write_only=True,
         required=True,
         validators=[validate_password],
+        style={'input_type': 'password'}
     )
 
     class Meta:
@@ -34,10 +22,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         }
 
     def create(self, validated_data):
-        """
-        Use create_user() NOT create() — it hashes the password.
-        Never store plain text passwords!
-        """
+        # Always use create_user() it hashes the password automatically
+        # Using create() directly would store it as plain text
         user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data['email'],
@@ -47,9 +33,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    """Used for reading and updating user profiles. No password field."""
-
-    # Extra computed field showing how many tasks this user has
+    # Shows how many tasks this user has without exposing the actual task data
     task_count = serializers.SerializerMethodField()
 
     class Meta:
@@ -58,13 +42,10 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'date_joined']
 
     def get_task_count(self, obj):
-        """SerializerMethodField calls get_<fieldname>(self, obj)."""
         return obj.tasks.count()
 
 
 class ChangePasswordSerializer(serializers.Serializer):
-    """Used for changing a user's password."""
-
     old_password = serializers.CharField(write_only=True, required=True)
     new_password = serializers.CharField(
         write_only=True,
@@ -73,26 +54,18 @@ class ChangePasswordSerializer(serializers.Serializer):
     )
 
     def validate_old_password(self, value):
-        """Check the old password is actually correct before allowing change."""
+        # Pull the user from the request context and check their current password
         user = self.context['request'].user
         if not user.check_password(value):
             raise serializers.ValidationError("Old password is incorrect.")
         return value
 
 
-# ─── TASK SERIALIZERS ─────────────────────────────────────────────────────────
-
 class TaskSerializer(serializers.ModelSerializer):
-    """
-    Main serializer for Tasks.
-    Handles create, read, update, delete.
-    """
-
-    # Read-only computed fields from model @property methods
     is_overdue = serializers.BooleanField(read_only=True)
     is_completed = serializers.BooleanField(read_only=True)
 
-    # Show owner's username instead of their numeric ID
+    # Show the username instead of just the user ID
     owner = serializers.CharField(source='user.username', read_only=True)
 
     class Meta:
@@ -105,26 +78,21 @@ class TaskSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'owner', 'completed_at', 'created_at', 'updated_at']
 
     def validate_due_date(self, value):
-        """Due date must be in the future."""
         if value <= timezone.now():
             raise serializers.ValidationError("Due date must be in the future.")
         return value
 
     def validate_priority(self, value):
-        """Priority must be LOW, MEDIUM, or HIGH."""
-        valid = [choice[0] for choice in Priority.choices]
-        if value not in valid:
+        valid_priorities = [choice[0] for choice in Priority.choices]
+        if value not in valid_priorities:
             raise serializers.ValidationError(
-                f"Priority must be one of: {', '.join(valid)}"
+                f"Priority must be one of: {', '.join(valid_priorities)}"
             )
         return value
 
     def validate(self, data):
-        """
-        Object-level validation — runs after all field validations.
-        Prevents editing completed tasks (except to change status).
-        """
-        if self.instance is not None:           # Only on updates, not creates
+        # Block edits on completed tasks the user needs to revert it to PENDING first
+        if self.instance is not None:
             if self.instance.is_completed:
                 allowed_fields = {'status'}
                 changed_fields = set(data.keys()) - allowed_fields
@@ -137,22 +105,19 @@ class TaskSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        """Auto-assign the logged-in user as task owner on creation."""
+        # Assign the loggedin user as the task owner automatically
         request = self.context.get('request')
         validated_data['user'] = request.user
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
-        """
-        Handle status changes specially:
-        - PENDING → COMPLETED: call mark_complete() to set the timestamp
-        - COMPLETED → PENDING: call mark_incomplete() to clear the timestamp
-        """
         new_status = validated_data.get('status', instance.status)
 
         if new_status == Status.COMPLETED and not instance.is_completed:
+            # Use the model method so completed_at gets set properly
             instance.mark_complete()
             validated_data.pop('status', None)
+
         elif new_status == Status.PENDING and instance.is_completed:
             instance.mark_incomplete()
             validated_data.pop('status', None)
@@ -161,8 +126,5 @@ class TaskSerializer(serializers.ModelSerializer):
 
 
 class TaskStatusSerializer(serializers.Serializer):
-    """
-    Minimal serializer for the toggle-status endpoint.
-    Only accepts a status field — nothing else.
-    """
+    # Minimal serializer just for the toggle status endpoint
     status = serializers.ChoiceField(choices=Status.choices, required=True)
