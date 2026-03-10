@@ -1,6 +1,5 @@
 """
 admin.py — Django Admin Configuration
-
 Register models here to manage them at /admin/
 """
 
