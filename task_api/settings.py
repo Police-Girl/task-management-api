@@ -27,7 +27,6 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
 
 
-# ─── INSTALLED APPS ───────────────────────────────────────────────────────────
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -46,7 +45,6 @@ INSTALLED_APPS = [
 ]
 
 
-# ─── MIDDLEWARE ────────────────────────────────────────────────────────────────
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -79,7 +77,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'task_api.wsgi.application'
 
 
-# ─── DATABASE ──────────────────────────────────────────────────────────────────
 # Uses SQLite locall.
 DATABASE_URL = config('DATABASE_URL', default='')
 
@@ -96,7 +93,6 @@ else:
     }
 
 
-# ─── PASSWORD VALIDATION ───────────────────────────────────────────────────────
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -105,14 +101,12 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# ─── INTERNATIONALIZATION ──────────────────────────────────────────────────────
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
 
-# ─── STATIC FILES ─────────────────────────────────────────────────────────────
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
@@ -120,7 +114,6 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-# ─── DJANGO REST FRAMEWORK ────────────────────────────────────────────────────
 REST_FRAMEWORK = {
     # Use JWT tokens for authentication
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -139,7 +132,6 @@ REST_FRAMEWORK = {
 }
 
 
-# ─── JWT TOKEN SETTINGS ───────────────────────────────────────────────────────
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
